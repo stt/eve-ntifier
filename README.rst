@@ -58,12 +58,13 @@ Trivia
     INFO:werkzeug:127.0.0.1 - - [19/May/2016 00:12:01] "POST /api/_eventhooks HTTP/1.1" 201 -
     {"_updated": "Thu, 01 Jan 1970 00:00:00 GMT", "_links": {"self": {"href": "_eventhooks/1", "title": "_eventhook"}}, "_created": "Thu, 01 Jan 1970 00:00:00 GMT", "_status": "OK", "_id": 1, "_etag": "39adfe6fc04411791d1ffcae485d6346ade6cd22"}
 
+    # w/ `nc -l 1234 >out.txt &` the above event produces this request
     $ cat out.txt
     POST /ev/_eventhooks/inserted/None HTTP/1.1
     Accept-Encoding: identity
     Content-Length: 378
     Host: localhost:1234
-    Content-Type: application/x-www-form-urlencoded
+    Content-Type: application/json
     Connection: close
     User-Agent: Python-urllib/2.7
 

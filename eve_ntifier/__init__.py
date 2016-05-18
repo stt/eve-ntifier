@@ -46,19 +46,23 @@ _event_cache = []
 def event_request(res, data):
     url = _formatter.format(res['url'], **data)
     if res.get('method') == 'POST':
-        request(url, json.dumps(data, default=str))
+        args = {
+          'data': json.dumps(data, default=str),
+          'headers': {'Content-type': 'application/json'}
+        }
+        request(url, **args)
     else:
         request(url)
 
 
-def request(url, data=None):
+def request(url, **args):
     """Called to send a resource event request
     If you want to add headers/auth etc look into _http
     but override this function if you want something more exotic
     """
     try:
         logger.debug('requesting %s', url)
-        res = _http.request(url, data)
+        res = _http.request(url, **args)
         logger.debug('response: %s', res)
     except Exception as e:
         logger.error('while requesting %s : %s', url, e)
