@@ -69,13 +69,17 @@ class DefaultHTTPHandler(HTTPHandler):
         password_manager.add_password(realm=None, uri=uri, user=login, passwd=password)
         self.http_opener = build_opener(HTTPBasicAuthHandler(password_manager), HTTPDigestAuthHandler(password_manager))
 
-    def request(self, url, data=None, headers={}, timeout=None):
-        request = Request(url, data, headers)
+    def build_request(self, url, data=None, headers={}):
+        return Request(url, data, headers)
+
+    def open(self, request, timeout=None):
         try:
             if (sys.version_info[0] == 2 and sys.version_info[1] > 5) or sys.version_info[0] > 2:
                 response = self.http_opener.open(request, timeout=timeout)
             else:
                 response = self.http_opener.open(request)
+
+            return response
         except HTTPError as error:
             if error.fp is None:
                 raise HTTPHandlerError(error.filename, error.code, error.msg, dict(error.hdrs))
@@ -91,5 +95,7 @@ class DefaultHTTPHandler(HTTPHandler):
         except BadStatusLine as error:
             raise HTTPHandlerError(httpmsg='httplib.BadStatusLine: %s' % (error.line))
 
-        return response.read().decode('utf-8')
+    def request(self, url, data=None, headers={}, timeout=None):
+        req = self.build_request(url, data, headers)
+        return self.open(req, timeout).read().decode('utf-8')
 

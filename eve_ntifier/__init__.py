@@ -30,42 +30,52 @@ _resname = '_eventhooks'
 _res = {
   'schema': {
     'resource': {'type':'string'},
+    'method': {'type':'string'}, # GET/POST
     'url': {'type':'string'}
   }
 }
 _events = ['inserted','replaced','updated','deleted_item']
 _formatter = DefaultFormatter()
-_async = False
+_async = True
 _pool = Pool()
 _http = DefaultHTTPHandler()
+_event_cache = []
 
 
-def merge(d, u):
-    "merges two dicts recursively to avoid overwriting"
-    for k, v in u.iteritems():
-        if isinstance(v, collections.Mapping):
-            r = merge(d.get(k, {}), v)
-            d[k] = r
-        else:
-            d[k] = u[k]
-    return d
+def event_request(res, data):
+    url = _formatter.format(res['url'], **data)
+    if res.get('method') == 'POST':
+        request(url, data)
+    else:
+        request(url)
 
 
-def request(url):
+def request(url, data=None):
+    """Called to send a resource event request
+    If you want to add headers/auth etc look into _http
+    but override this function if you want something more exotic
+    """
     try:
         logger.debug('requesting %s', url)
-        res = _http.request(url)
+        res = _http.request(url, data)
         logger.debug('response: %s', res)
     except Exception as e:
         logger.error('while requesting %s : %s', url, e)
 
 
+def get_eventhooks():
+    global _event_cache
+    # fyi: can't call this in init(), datalayer is properly usable only
+    # after flask run(), config object is not really valid before
+    if len(_event_cache) == 0:
+        _event_cache = app.data.find(_resname, {}, {})
+    return _event_cache
+
+
 def register_handler(event):
 
     def handle(resource, data, **args):
-        lookup = {'resource': resource}
-        
-        rs = app.data.find(_resname, {}, lookup)
+        rs = filter(lambda r: r['resource']==resource, get_eventhooks())
         if not rs: return
 
         for d in data:
@@ -73,18 +83,17 @@ def register_handler(event):
             d['_event'] = event
 
             for rec in rs:
-                url = _formatter.format(rec['url'], **d)
                 if _async:
-                    _pool.apply(request, args=(url,))
+                    _pool.apply(event_request, args=(rec, d))
                 else:
-                    request(url)
+                    event_request(rec, d)
 
     return handle
 
 
 def init(app):
-    app.config = merge(app.config, {'DOMAIN': {_resname: _res}})
-    app.set_defaults()
+    app.config['DOMAIN'][_resname] = _res
+    app.register_resource(_resname, _res)
 
     for ev in _events:
         getattr(app, 'on_'+ev).__iadd__(register_handler(ev))

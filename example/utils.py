@@ -24,10 +24,15 @@ class DummyDataLayer(DataLayer):
             if m not in self.repo:
                 self.repo[m] = {}
 
+    def combine_queries(self, query_a, query_b):
+        z = query_a.copy()
+        z.update(query_b)
+        return z
+
     def _find(self, resource, req, **lookup):
-        """
         spec = {}
         sort = []
+        """
         if req:
           if req.where:
             spec = json.loads(req.where)
@@ -42,6 +47,7 @@ class DummyDataLayer(DataLayer):
                   except AttributeError:
                       abort(400, description='Unknown field name: %s' % sn)
 
+        """
         if 'lookup' in lookup and lookup['lookup']:
             spec = self.combine_queries(
                 spec, lookup['lookup'])
@@ -54,12 +60,13 @@ class DummyDataLayer(DataLayer):
             spec,
             client_projection,
             sort)
-        """
-        if not 'lookup' in lookup: return None
 
         rs = []
 
-        for k,v in lookup['lookup'].items():
+        if len(spec) == 0:
+            return self.repo[resource].values()
+
+        for k,v in spec.items():
             if k == config.ID_FIELD and k in self.repo[resource]:
                 return self.repo[resource][v]
             else:
