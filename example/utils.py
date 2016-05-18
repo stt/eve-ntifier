@@ -1,5 +1,6 @@
 from eve.io.base import DataLayer
-from eve.utils import config, auto_fields
+from eve.methods.common import serialize
+from eve.utils import config, auto_fields, str_to_date
 import json
 
 
@@ -8,7 +9,15 @@ class ResultWrapper(list):
         return len(self)
 
 
-class DummyDataLayer(DataLayer):
+class JsonDataLayer(DataLayer):
+
+    serializers = {
+        'integer': lambda value: int(value) if value is not None else None,
+        'float': lambda value: float(value) if value is not None else None,
+        'number': lambda val: json.loads(val) if val is not None else None,
+        'datetime': str_to_date
+    }
+
     def _write(self):
         with open(self.datafile,'w+') as fh:
             fh.write(json.dumps(self.repo, default=str))
@@ -61,23 +70,26 @@ class DummyDataLayer(DataLayer):
             client_projection,
             sort)
 
-        rs = []
-
         if len(spec) == 0:
             return self.repo[resource].values()
 
-        for k,v in spec.items():
-            if k == config.ID_FIELD and k in self.repo[resource]:
-                return self.repo[resource][v]
-            else:
-                for id,r in self.repo[resource].items():
-                    if r[k] == v:
-                        rs.append(r)
+        # id from query is str, in repo it's int
+        spec = serialize(spec, resource)
+        spec = set(spec.items())
+
+        rs = []
+
+        for id,r in self.repo[resource].items():
+            ok = len(set(r.items()) & spec) == len(spec)
+            if ok: rs.append(r.copy())
+
         return rs
 
 
     def find_one(self, resource, req, **lookup):
-        return self._find(resource, req, lookup)
+        rs = self._find(resource, req, lookup=lookup)
+        print lookup, rs
+        return None if len(rs) < 1 else rs[0]
 
     def find(self, resource, req, sub_resource_lookup):
         return ResultWrapper(self._find(resource, req, lookup=sub_resource_lookup))
@@ -88,7 +100,7 @@ class DummyDataLayer(DataLayer):
         ids = []
         for doc in doc_or_docs:
             keys = self.repo[resource].keys()
-            id = 1 if len(keys) == 0 else max(keys)
+            id = 1 if len(keys) == 0 else int(max(keys))+1
             for f in auto_fields(resource):
                 if f in doc: del doc[f]
             doc[config.ID_FIELD] = id
@@ -106,7 +118,8 @@ class DummyDataLayer(DataLayer):
         self._write()
 
     def remove(self, resource, lookup):
-        rs = self._find(resource, None, lookup)
+        rs = self._find(resource, None, lookup=lookup)
         for rec in rs:
             del self.repo[resource][rec[config.ID_FIELD]]
+        self._write()
 

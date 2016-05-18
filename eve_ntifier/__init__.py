@@ -4,6 +4,7 @@ import collections
 import urllib2
 import logging
 import string
+import json
 import sys
 from httphandler import DefaultHTTPHandler
 
@@ -22,7 +23,7 @@ class DefaultFormatter(string.Formatter):
                 # there was a bug in PEP3101?
                 return string.Formatter.get_value(self, key, args, kwds)
         except KeyError as e:
-            logger.warn(str(e))
+            logger.warn("%s: %s" % (type(e), e))
 
 
 # defaults you are welcome to override
@@ -45,7 +46,7 @@ _event_cache = []
 def event_request(res, data):
     url = _formatter.format(res['url'], **data)
     if res.get('method') == 'POST':
-        request(url, data)
+        request(url, json.dumps(data, default=str))
     else:
         request(url)
 
@@ -75,6 +76,9 @@ def get_eventhooks():
 def register_handler(event):
 
     def handle(resource, data, **args):
+        global _event_cache
+        if resource == _resname:
+            _event_cache = []
         rs = filter(lambda r: r['resource']==resource, get_eventhooks())
         if not rs: return
 

@@ -10,7 +10,11 @@ import eve_ntifier
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-app = Eve(data=utils.DummyDataLayer)
+app = Eve(data=utils.JsonDataLayer)
+
+# ID_FIELD defaults to objectid which our JsonDataLayer doesn't support
+_id = app.config['ID_FIELD']
+eve_ntifier._res['schema'][_id] = {'type': 'integer'}
 
 eve_ntifier.init(app)
 
