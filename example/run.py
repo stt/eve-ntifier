@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 app = Eve(data=utils.DummyDataLayer)
 
-eve_ntifier.register_events(app)
+eve_ntifier.init(app)
 
 logger.info("registered paths: %s", app.url_map)
 

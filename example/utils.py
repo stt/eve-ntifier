@@ -24,7 +24,7 @@ class DummyDataLayer(DataLayer):
             if m not in self.repo:
                 self.repo[m] = {}
 
-    def find_one(self, resource, req, **lookup):
+    def _find(self, resource, req, **lookup):
         """
         spec = {}
         sort = []
@@ -57,15 +57,24 @@ class DummyDataLayer(DataLayer):
         """
         if not 'lookup' in lookup: return None
 
+        rs = []
+
         for k,v in lookup['lookup'].items():
             if k == config.ID_FIELD and k in self.repo[resource]:
                 return self.repo[resource][v]
             else:
                 for id,r in self.repo[resource].items():
-                    if r[k] == v: return r
+                    if r[k] == v:
+                        rs.append(r)
+        return rs
+
+
+    def find_one(self, resource, req, **lookup):
+        return self._find(resource, req, lookup)
 
     def find(self, resource, req, sub_resource_lookup):
-        return ResultWrapper(self.repo[resource])
+        return ResultWrapper(self._find(resource, req, lookup=sub_resource_lookup))
+
     def insert(self, resource, doc_or_docs):
         #if isinstance(doc_or_docs, list): TODO
         # if upsert..
@@ -80,12 +89,17 @@ class DummyDataLayer(DataLayer):
             ids.append(id)
         self._write()
         return ids
+
     def update(self, resource, id_, updates, original):
         self.replace(resource, id_, updates, original)
+
     def replace(self, resource, id_, updates, original):
         d = {getattr(doc_or_docs, config.ID_FIELD): doc_or_docs}
         self.repo[resource].update(doc_or_docs)
         self._write()
-    def remove(self, resource, lookup): pass
 
+    def remove(self, resource, lookup):
+        rs = self._find(resource, None, lookup)
+        for rec in rs:
+            del self.repo[resource][rec[config.ID_FIELD]]
 

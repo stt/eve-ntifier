@@ -1,9 +1,7 @@
 eve-ntifier
 ===========
 
-Simply easy declarative HTTP events for Eve
-
-Adds a resource (_eventhooks by default) where you can insert URLs to be called when a given resource is changed. The URL can have template keywords surrounded by curlybraces that will be filled in with the data from the changed record.
+Adds a resource (_eventhooks by default) where you can insert URLs to be called when a given resource is changed. The URL can have template keywords surrounded by curlybraces that will be filled in with data from the changed record.
 
 
 Usage
@@ -11,11 +9,11 @@ Usage
 
 .. code-block:: python
 
-    # settings.py: after DOMAIN is defined
-    eve_ntifier.init_events(DOMAIN)
- 
-    # run.py: after Eve is initialized
-    eve_ntifier.register_events(app)
+    from eve import Eve
+    import eve_ntifier
+
+    app = Eve()
+    eve_ntifier.init(app)
 
 
 Example

@@ -17,6 +17,3 @@ DOMAIN = {
   }
 }
 
-import eve_ntifier
-eve_ntifier.init_events(DOMAIN)
-
